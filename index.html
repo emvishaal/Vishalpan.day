@@ -50,9 +50,15 @@
   };
 </script>
 
-<!-- Set theme before paint — no flash -->
+<!-- Check theme and preloader state before paint — zero flash -->
 <script>
   (function () {
+    try {
+      if (sessionStorage.getItem('hasSeenGreeting')) {
+        document.documentElement.classList.add('skip-preloader');
+      }
+    } catch (e) {}
+
     var stored = null;
     try { stored = localStorage.getItem('theme'); } catch (e) {}
     var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -69,6 +75,111 @@
   .delay-200 { animation-delay: 200ms; }
   .delay-300 { animation-delay: 300ms; }
   .delay-500 { animation-delay: 500ms; }
+
+  /* ---- Greeting Preloader ---- */
+  .skip-preloader #greeting-preloader {
+    display: none !important;
+  }
+
+  body.preloader-active {
+    overflow: hidden !important;
+  }
+
+  #greeting-preloader {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: #0a0a0a;
+    color: #F9F6F0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 999999;
+    opacity: 1;
+    transition: opacity 0.7s var(--ease), visibility 0.7s ease;
+    user-select: none;
+  }
+
+  #greeting-preloader.fade-out {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  .preloader-box {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    padding: 2rem;
+  }
+
+  .preloader-symbol {
+    font-size: 1.1rem;
+    color: #a1a1aa;
+    animation: preloaderPulse 1.8s ease-in-out infinite alternate;
+  }
+
+  #greeting-text {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: clamp(2.4rem, 6vw, 4.2rem);
+    font-weight: 400;
+    letter-spacing: -0.02em;
+    min-height: 1.35em;
+    line-height: 1.2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+  }
+
+  #greeting-lang {
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: #71717a;
+    transition: opacity 0.2s ease;
+  }
+
+  .text-fade-out {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  .text-fade-in {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  #skip-preloader-btn {
+    position: absolute;
+    bottom: 2.5rem;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: #71717a;
+    border-bottom: 1px solid transparent;
+    transition: all 0.2s ease;
+    background: none;
+    cursor: pointer;
+    padding-bottom: 2px;
+  }
+
+  #skip-preloader-btn:hover {
+    color: #F9F6F0;
+    border-color: #F9F6F0;
+  }
+
+  @keyframes preloaderPulse {
+    from { opacity: 0.25; transform: scale(0.9); }
+    to { opacity: 0.85; transform: scale(1.1); }
+  }
 
   /* ---- Scroll reveal (progressive enhancement: visible if JS/reduced-motion) ---- */
   @media (prefers-reduced-motion: no-preference) {
@@ -90,6 +201,7 @@
     html { scroll-behavior: auto !important; }
     .marquee-viewport { overflow-x: auto; }
     .marquee-dup { display: none; }
+    #greeting-preloader { display: none !important; }
   }
 
   /* ---- Focus visibility ---- */
@@ -111,7 +223,7 @@
 
   /* ---- Print: a clean one-pager ---- */
   @media print {
-    header nav, #mobile-menu, .marquee-viewport, footer, .no-print { display: none !important; }
+    #greeting-preloader, header nav, #mobile-menu, .marquee-viewport, footer, .no-print { display: none !important; }
     body { background: #fff !important; color: #000 !important; }
     .reveal { opacity: 1 !important; transform: none !important; }
     section { page-break-inside: avoid; padding: 1rem 0 !important; }
@@ -131,6 +243,16 @@
 
 <body class="bg-bone text-obsidian dark:bg-obsidian dark:text-bone min-h-screen flex flex-col font-sans selection:bg-obsidian selection:text-bone dark:selection:bg-bone dark:selection:text-obsidian overflow-x-hidden antialiased">
 
+<!-- ============ GREETING PRELOADER ============ -->
+<div id="greeting-preloader" aria-live="polite" aria-atomic="true">
+  <div class="preloader-box">
+    <div class="preloader-symbol" aria-hidden="true">✦</div>
+    <div id="greeting-text">Welcome</div>
+    <div id="greeting-lang">English</div>
+  </div>
+  <button type="button" id="skip-preloader-btn" aria-label="Skip greeting intro">Skip ↗</button>
+</div>
+
 <a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:px-5 focus:py-3 focus:bg-obsidian focus:text-bone dark:focus:bg-bone dark:focus:text-obsidian focus:text-xs focus:font-bold focus:uppercase focus:tracking-widest">
   Skip to content
 </a>
@@ -144,9 +266,10 @@
     </a>
 
     <nav class="hidden md:flex items-center gap-9" aria-label="Primary">
-      <a href="#pillars"    class="text-xs font-semibold uppercase tracking-[0.15em] hover:text-gray-500 dark:hover:text-gray-400 transition-colors">What I Do</a>
-      <a href="#builds"     class="text-xs font-semibold uppercase tracking-[0.15em] hover:text-gray-500 dark:hover:text-gray-400 transition-colors">Builds</a>
-      <a href="#experience" class="text-xs font-semibold uppercase tracking-[0.15em] hover:text-gray-500 dark:hover:text-gray-400 transition-colors">Experience</a>
+      <a href="#pillars"     class="text-xs font-semibold uppercase tracking-[0.15em] hover:text-gray-500 dark:hover:text-gray-400 transition-colors">What I Do</a>
+      <a href="#builds"      class="text-xs font-semibold uppercase tracking-[0.15em] hover:text-gray-500 dark:hover:text-gray-400 transition-colors">Builds</a>
+      <a href="#insights"    class="text-xs font-semibold uppercase tracking-[0.15em] hover:text-gray-500 dark:hover:text-gray-400 transition-colors">Ideas &amp; Insights</a>
+      <a href="#experience"  class="text-xs font-semibold uppercase tracking-[0.15em] hover:text-gray-500 dark:hover:text-gray-400 transition-colors">Experience</a>
       <a href="#credentials" class="text-xs font-semibold uppercase tracking-[0.15em] hover:text-gray-500 dark:hover:text-gray-400 transition-colors">Credentials</a>
 
       <div class="w-px h-4 bg-gray-300 dark:bg-gray-800 mx-1" aria-hidden="true"></div>
@@ -179,6 +302,7 @@
        class="fixed inset-0 bg-bone dark:bg-obsidian z-40 transform translate-x-full transition-transform duration-300 ease-in-out flex flex-col justify-center items-center gap-7 md:hidden">
     <a href="#pillars"     class="text-2xl font-serif hover:text-gray-500 transition-colors">What I Do</a>
     <a href="#builds"      class="text-2xl font-serif hover:text-gray-500 transition-colors">Builds</a>
+    <a href="#insights"    class="text-2xl font-serif hover:text-gray-500 transition-colors">Ideas &amp; Insights</a>
     <a href="#experience"  class="text-2xl font-serif hover:text-gray-500 transition-colors">Experience</a>
     <a href="#credentials" class="text-2xl font-serif hover:text-gray-500 transition-colors">Credentials</a>
     <a href="#contact"     class="text-2xl font-serif hover:text-gray-500 transition-colors">Contact</a>
@@ -435,8 +559,83 @@
     </div>
   </section>
 
+  <!-- ============ IDEAS & INSIGHTS ============ -->
+  <section id="insights" class="max-w-[1200px] mx-auto px-6 md:px-12 py-24 md:py-32 reveal">
+    <div class="mb-16 md:flex justify-between items-end gap-12">
+      <div class="max-w-2xl">
+        <div class="flex items-center gap-4 mb-6">
+          <div class="h-px w-8 bg-obsidian dark:bg-bone" aria-hidden="true"></div>
+          <p class="text-[10px] md:text-xs font-bold uppercase tracking-[0.3em] text-gray-500">Field Notes &amp; Perspectives</p>
+        </div>
+        <h2 class="font-serif text-3xl md:text-5xl leading-tight">Ideas &amp; Insights.</h2>
+      </div>
+      <p class="text-gray-500 max-w-sm mt-6 md:mt-0 text-sm leading-relaxed">
+        Observations on month-end discipline, contractual boundary friction, and lean operations.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <article class="border border-gray-300 dark:border-gray-800 p-8 hover:border-obsidian dark:hover:border-bone transition-colors flex flex-col justify-between group">
+        <div>
+          <div class="flex items-center justify-between text-[11px] uppercase tracking-[0.18em] text-gray-400 dark:text-gray-500 mb-6">
+            <span>Finance Ops</span>
+            <span>4 min read</span>
+          </div>
+          <h3 class="font-serif text-2xl mb-4 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors leading-snug">
+            The 3-day close is a contract problem, not a spreadsheet problem.
+          </h3>
+          <p class="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+            When reconciliations breach calendar deadlines, the root cause is rarely arithmetic. It is ambiguous vendor delivery milestones, unaccrued disputes, and undefined sign-off clauses lingering in the agreement.
+          </p>
+        </div>
+        <div class="mt-8 pt-6 border-t border-gray-200 dark:border-gray-800 flex items-center justify-between text-xs font-bold uppercase tracking-[0.15em]">
+          <span>Close Engineering</span>
+          <span class="group-hover:translate-x-1 transition-transform">&rarr;</span>
+        </div>
+      </article>
+
+      <article class="border border-gray-300 dark:border-gray-800 p-8 hover:border-obsidian dark:hover:border-bone transition-colors flex flex-col justify-between group">
+        <div>
+          <div class="flex items-center justify-between text-[11px] uppercase tracking-[0.18em] text-gray-400 dark:text-gray-500 mb-6">
+            <span>Legal-Ops</span>
+            <span>5 min read</span>
+          </div>
+          <h3 class="font-serif text-2xl mb-4 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors leading-snug">
+            Dispute avoidance begins inside the General Ledger.
+          </h3>
+          <p class="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+            By the time legal receives an escalation, months of balance discrepancies have already crystallized. Treating GL variance as early-stage contract mediation eliminates legal spend before arbitration starts.
+          </p>
+        </div>
+        <div class="mt-8 pt-6 border-t border-gray-200 dark:border-gray-800 flex items-center justify-between text-xs font-bold uppercase tracking-[0.15em]">
+          <span>ADR &amp; Balance Sheets</span>
+          <span class="group-hover:translate-x-1 transition-transform">&rarr;</span>
+        </div>
+      </article>
+
+      <article class="border border-gray-300 dark:border-gray-800 p-8 hover:border-obsidian dark:hover:border-bone transition-colors flex flex-col justify-between group">
+        <div>
+          <div class="flex items-center justify-between text-[11px] uppercase tracking-[0.18em] text-gray-400 dark:text-gray-500 mb-6">
+            <span>Internal Tooling</span>
+            <span>3 min read</span>
+          </div>
+          <h3 class="font-serif text-2xl mb-4 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors leading-snug">
+            Why pragmatic scripts consistently beat enterprise SaaS suites.
+          </h3>
+          <p class="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+            Most teams buy five-figure subscription software to solve a three-step recurring chore. A 60-line Google Apps Script written on Friday afternoon delivers immediate compliance without a procurement cycle.
+          </p>
+        </div>
+        <div class="mt-8 pt-6 border-t border-gray-200 dark:border-gray-800 flex items-center justify-between text-xs font-bold uppercase tracking-[0.15em]">
+          <span>Lightweight Automation</span>
+          <span class="group-hover:translate-x-1 transition-transform">&rarr;</span>
+        </div>
+      </article>
+    </div>
+  </section>
+
   <!-- ============ EXPERIENCE ============ -->
-  <section id="experience" class="max-w-[1200px] mx-auto px-6 md:px-12 py-24 md:py-32 reveal">
+  <section id="experience" class="max-w-[1200px] mx-auto px-6 md:px-12 py-24 md:py-32 reveal border-t border-gray-200 dark:border-gray-800">
     <div class="flex items-center gap-4 mb-6">
       <div class="h-px w-8 bg-obsidian dark:bg-bone" aria-hidden="true"></div>
       <p class="text-[10px] md:text-xs font-bold uppercase tracking-[0.3em] text-gray-500">Professional Tenure</p>
@@ -696,6 +895,122 @@
 <script>
 (function () {
   'use strict';
+
+  /* ---------------- Multilingual Time Greeting Preloader ---------------- */
+  var preloader = document.getElementById('greeting-preloader');
+  var skipBtn = document.getElementById('skip-preloader-btn');
+  var greetingText = document.getElementById('greeting-text');
+  var greetingLang = document.getElementById('greeting-lang');
+
+  var hasSeen = false;
+  try { hasSeen = sessionStorage.getItem('hasSeenGreeting'); } catch (e) {}
+
+  function dismissPreloader() {
+    if (!preloader) return;
+    preloader.classList.add('fade-out');
+    document.body.classList.remove('preloader-active');
+    try { sessionStorage.setItem('hasSeenGreeting', 'true'); } catch (e) {}
+    setTimeout(function () {
+      if (preloader.parentNode) preloader.parentNode.removeChild(preloader);
+    }, 700);
+  }
+
+  if (hasSeen) {
+    if (preloader && preloader.parentNode) preloader.parentNode.removeChild(preloader);
+  } else if (preloader) {
+    document.body.classList.add('preloader-active');
+
+    if (skipBtn) {
+      skipBtn.addEventListener('click', dismissPreloader);
+    }
+
+    var hour = new Date().getHours();
+    var bucket = 'morning';
+    if (hour >= 12 && hour < 17) bucket = 'afternoon';
+    else if (hour >= 17 || hour < 5) bucket = 'evening';
+
+    var greetingDatabase = {
+      morning: [
+        { text: 'Good Morning', lang: 'English' },
+        { text: 'शुभ प्रभात', lang: 'Hindi' },
+        { text: 'সুপ্রভাত', lang: 'Bengali' },
+        { text: 'காலை வணக்கம்', lang: 'Tamil' },
+        { text: 'శుభోదయం', lang: 'Telugu' },
+        { text: 'शुभ सकाळ', lang: 'Marathi' },
+        { text: 'શુભ સવાર', lang: 'Gujarati' },
+        { text: 'ಶುಭೋದಯ', lang: 'Kannada' },
+        { text: 'സുപ്രഭാതം', lang: 'Malayalam' },
+        { text: 'ਸਤਿ ਸ੍ਰੀ ਅਕਾਲ', lang: 'Punjabi' },
+        { text: 'Bonjour', lang: 'French' },
+        { text: 'Buenos Días', lang: 'Spanish' },
+        { text: 'おはようございます', lang: 'Japanese' },
+        { text: 'Guten Morgen', lang: 'German' },
+        { text: 'Buongiorno', lang: 'Italian' }
+      ],
+      afternoon: [
+        { text: 'Good Afternoon', lang: 'English' },
+        { text: 'शुभ दोपहर', lang: 'Hindi' },
+        { text: 'শুভ দুপুর', lang: 'Bengali' },
+        { text: 'மதிய வணக்கம்', lang: 'Tamil' },
+        { text: 'శుభ మధ్యాహ్నం', lang: 'Telugu' },
+        { text: 'शुभ दुपार', lang: 'Marathi' },
+        { text: 'શુભ બપોર', lang: 'Gujarati' },
+        { text: 'ಶುಭ ಮಧ್ಯಾಹ್ನ', lang: 'Kannada' },
+        { text: 'ശുഭദിനം', lang: 'Malayalam' },
+        { text: 'Bon Après-midi', lang: 'French' },
+        { text: 'Buenas Tardes', lang: 'Spanish' },
+        { text: 'こんにちは', lang: 'Japanese' },
+        { text: 'Guten Tag', lang: 'German' },
+        { text: 'Buon Pomeriggio', lang: 'Italian' }
+      ],
+      evening: [
+        { text: 'Good Evening', lang: 'English' },
+        { text: 'शुभ संध्या', lang: 'Hindi' },
+        { text: 'শুভ সন্ধ্যা', lang: 'Bengali' },
+        { text: 'மாலை வணக்கம்', lang: 'Tamil' },
+        { text: 'శుభ సాయంత్రം', lang: 'Telugu' },
+        { text: 'शुभ संध्याकाळ', lang: 'Marathi' },
+        { text: 'શુભ સાંજ', lang: 'Gujarati' },
+        { text: 'ಶುಭ ಸಂಜೆ', lang: 'Kannada' },
+        { text: 'ശുഭ സായാഹ്നം', lang: 'Malayalam' },
+        { text: 'Bonsoir', lang: 'French' },
+        { text: 'Buenas Noches', lang: 'Spanish' },
+        { text: 'こんばんは', lang: 'Japanese' },
+        { text: 'Guten Abend', lang: 'German' },
+        { text: 'Buonasera', lang: 'Italian' }
+      ]
+    };
+
+    var list = greetingDatabase[bucket];
+    var firstGreeting = list[0];
+    var randomOthers = list.slice(1).sort(function () { return 0.5 - Math.random(); }).slice(0, 5);
+    var sequence = [firstGreeting].concat(randomOthers);
+    var index = 0;
+
+    function cycleGreeting() {
+      if (!preloader || !greetingText || !greetingLang) return;
+      greetingText.classList.add('text-fade-out');
+      greetingLang.classList.add('text-fade-out');
+
+      setTimeout(function () {
+        var item = sequence[index];
+        greetingText.textContent = item.text;
+        greetingLang.textContent = item.lang;
+
+        greetingText.classList.remove('text-fade-out');
+        greetingLang.classList.remove('text-fade-out');
+        index++;
+
+        if (index < sequence.length) {
+          setTimeout(cycleGreeting, 380);
+        } else {
+          setTimeout(dismissPreloader, 600);
+        }
+      }, 160);
+    }
+
+    cycleGreeting();
+  }
 
   /* ---------------- Theme ---------------- */
   var root = document.documentElement;
